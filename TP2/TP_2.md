@@ -90,6 +90,21 @@ New-NetIPAddress -InterfaceAlias "VirtualBox Host-Only Network" -IPAddress 192.1
 
 - un `ping` suffit !
 
+```
+PS C:\Users\brunc> ping 192.168.0.2
+
+Envoi d’une requête 'Ping'  192.168.0.2 avec 32 octets de données :
+Réponse de 192.168.0.2 : octets=32 temps<1ms TTL=64
+Réponse de 192.168.0.2 : octets=32 temps<1ms TTL=64
+Réponse de 192.168.0.2 : octets=32 temps<1ms TTL=64
+Réponse de 192.168.0.2 : octets=32 temps<1ms TTL=64
+
+Statistiques Ping pour 192.168.0.2:
+    Paquets : envoyés = 4, reçus = 4, perdus = 0 (perte 0%),
+Durée approximative des boucles en millisecondes :
+    Minimum = 0ms, Maximum = 0ms, Moyenne = 0ms
+```
+
 🌞 **Wireshark it**
 
 - `ping` ça envoie des paquets de type ICMP (c'est pas de l'IP, c'est un de ses frères)
@@ -97,11 +112,21 @@ New-NetIPAddress -InterfaceAlias "VirtualBox Host-Only Network" -IPAddress 192.1
   - il existe plusieurs types de paquets ICMP, qui servent à faire des trucs différents
 - **déterminez, grâce à Wireshark, quel type de paquet ICMP est envoyé par `ping`**
   - pour le ping que vous envoyez
+
+  ```
+  request
+  ```
   - et le pong que vous recevez en retour
+
+```
+reply
+```
 
 > Vous trouverez sur [la page Wikipedia de ICMP](https://en.wikipedia.org/wiki/Internet_Control_Message_Protocol) un tableau qui répertorie tous les types ICMP et leur utilité
 
 🦈 **PCAP qui contient les paquets ICMP qui vous ont permis d'identifier les types ICMP**
+
+![ping](./pingpong.pcapng)
 
 # II. ARP my bro
 
@@ -118,9 +143,25 @@ ARP permet, pour rappel, de résoudre la situation suivante :
 🌞 **Check the ARP table**
 
 - utilisez une commande pour afficher votre table ARP
+
+```
+arp -a
+```
+
 - déterminez la MAC de votre binome depuis votre table ARP
+
+```
+Adresse Internet      Adresse physique        Type
+192.168.0.2           08-00-27-fa-a4-7c       dynamique
+```
+
 - déterminez la MAC de la *gateway* de votre réseau 
   - celle de votre réseau physique, WiFi, genre YNOV, car il n'y en a pas dans votre ptit LAN
+
+  ```
+   192.168.0.254         00-24-d4-a4-55-34     dynamique
+   (wi-fi domestique)
+  ```
   - c'est juste pour vous faire manipuler un peu encore :)
 
 > Il peut être utile de ré-effectuer des `ping` avant d'afficher la table ARP. En effet : les infos stockées dans la table ARP ne sont stockées que temporairement. Ce laps de temps est de l'ordre de ~60 secondes sur la plupart de nos machines.
@@ -128,8 +169,28 @@ ARP permet, pour rappel, de résoudre la situation suivante :
 🌞 **Manipuler la table ARP**
 
 - utilisez une commande pour vider votre table ARP
+
+```
+arp -d
+```
+
 - prouvez que ça fonctionne en l'affichant et en constatant les changements
+
+```
+Interface : 192.168.0.1 --- 0xb
+  Adresse Internet      Adresse physique      Type
+  224.0.0.22            01-00-5e-00-00-16     statique
+```
+
 - ré-effectuez des pings, et constatez la ré-apparition des données dans la table ARP
+
+```
+Interface : 192.168.0.1 --- 0xb
+  Adresse Internet      Adresse physique      Type
+  192.168.0.2           08-00-27-fa-a4-7c     dynamique
+  224.0.0.22            01-00-5e-00-00-16     statique
+  239.255.255.250       01-00-5e-7f-ff-fa     statique
+```
 
 > Les échanges ARP sont effectuées automatiquement par votre machine lorsqu'elle essaie de joindre une machine sur le même LAN qu'elle. Si la MAC du destinataire n'est pas déjà dans la table ARP, alors un échange ARP sera déclenché.
 
@@ -137,12 +198,32 @@ ARP permet, pour rappel, de résoudre la situation suivante :
 
 - vous savez maintenant comment forcer un échange ARP : il sufit de vider la table ARP et tenter de contacter quelqu'un, l'échange ARP se fait automatiquement
 - mettez en évidence les deux trames ARP échangées lorsque vous essayez de contacter quelqu'un pour la "première" fois
+
+```
+1	0.000000	0a:00:27:00:00:0b	Broadcast	ARP	42	Who has 192.168.0.2? Tell 192.168.0.1
+2	0.000191	PcsCompu_fa:a4:7c	0a:00:27:00:00:0b	ARP	60	192.168.0.2 is at 08:00:27:fa:a4:7c
+```
+
   - déterminez, pour les deux trames, les adresses source et destination
+
+```
+      src                                 dest
+1     0a:00:27:00:00:0b                   ff:ff:ff:ff:ff:ff
+2     08:00:27:a4:7c                      0a:00:27:00:00:0b
+```
   - déterminez à quoi correspond chacune de ces adresses
+
+```
+      src                                 dest
+1     PC1                                 broadcast
+2     PC2                                 PC1
+```
 
 🦈 **PCAP qui contient les trames ARP**
 
 > L'échange ARP est constitué de deux trames : un ARP broadcast et un ARP reply.
+
+![échange ARP](./arp.pcapng)
 
 # II.5 Interlude hackerzz
 
@@ -208,7 +289,7 @@ L'échange DHCP consiste en 4 trames : DORA, que je vous laisse google vous-mêm
 
   ```
   Trame                         Source                          Destination
-  Discover                      0.0.0.0 (PC sans IP assignée)   255.255.255.255 (broadcast)
+  Discover                      0.0.0.0 (PC sans IP assignée)   255.255.255.255 (broadcast recherche du server DHCP)
   Offer                         10.33.19.254 (server DHCP)      10.33.18.109 (PC avec IP proposée)
   Request                       0.0.0.0                         255.255.255.255
   Acknowledge                   10.33.19.254                    10.33.18.109
@@ -223,6 +304,8 @@ L'échange DHCP consiste en 4 trames : DORA, que je vous laisse google vous-mêm
 ```
 
 🦈 **PCAP qui contient l'échange DORA**
+
+![DORA](./DORA.pcapng)
 
 > **Soucis** : l'échange DHCP ne se produit qu'à la première connexion. **Pour forcer un échange DHCP**, ça dépend de votre OS. Sur **GNU/Linux**, avec `dhclient` ça se fait bien. Sur **Windows**, le plus simple reste de définir une IP statique pourrie sur la carte réseau, se déconnecter du réseau, remettre en DHCP, se reconnecter au réseau. Sur **MacOS**, je connais peu mais Internet dit qu'c'est po si compliqué, appelez moi si besoin.
 
@@ -254,3 +337,5 @@ TCP et UDP ce sont les deux protocoles qui utilisent des ports. Si on veut accé
   ```
 
 🦈 **PCAP qui contient un extrait de l'échange qui vous a permis d'identifier les infos**
+
+![video youtube](./vid_yt.pcapng)
