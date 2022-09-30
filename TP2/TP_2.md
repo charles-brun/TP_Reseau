@@ -81,7 +81,10 @@ Le lab, il vous faut deux machine :
 - vous renseignerez aussi les commandes utilisées pour définir les adresses IP *via* la ligne de commande
 
 ```
-New-NetIPAddress -InterfaceAlias "VirtualBox Host-Only Network" -IPAddress 192.168.0.1 -PrefixLength "26"
+PC1 (windows):
+        New-NetIPAddress -InterfaceAlias "VirtualBox Host-Only Network" -IPAddress 192.168.0.1 -PrefixLength "26"
+PC2 (VM linux):
+        ifconfig enp0s8 192.168.0.2 netmask 255.255.255.192
 ```
 
 > Rappel : tout doit être fait *via* la ligne de commandes. Faites-vous du bien, et utilisez Powershell plutôt que l'antique cmd sous Windows svp.
