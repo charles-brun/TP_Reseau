@@ -1,3 +1,3 @@
-# Repo du projet : 
+# Projet Serveur de Jeu : 
 
-`https://github.com/charles-brun/projet-gamenet`
+[Lien du projet](https://github.com/charles-brun/projet-gamenet).
